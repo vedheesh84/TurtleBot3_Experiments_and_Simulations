@@ -1,0 +1,219 @@
+<?xml version="1.0"?>
+<!--
+  TurtleBot AMR Base - Differential Drive Platform
+  =================================================
+
+  LEARNING OBJECTIVES (builds on learning_tf):
+  - Understand link and joint definitions
+  - See how TF tree is built from URDF
+  - Learn about continuous vs fixed joints
+  - Understand inertial properties for simulation
+
+  Robot Configuration:
+  - 2 drive wheels (left/right)
+  - 2 caster wheels (passive, for stability)
+  - Rectangular chassis
+
+  TF Tree Created:
+    base_link
+    ├── base_footprint (for Nav2 compatibility)
+    ├── left_wheel_link
+    ├── right_wheel_link
+    ├── front_caster_link
+    └── rear_caster_link
+-->
+
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- ========================================== -->
+  <!-- ROBOT PARAMETERS                            -->
+  <!-- ========================================== -->
+  <!--
+    These values define the physical robot.
+    Modify these to match your actual hardware.
+  -->
+
+  <!-- Chassis dimensions -->
+  <xacro:property name="chassis_length" value="0.30"/>
+  <xacro:property name="chassis_width" value="0.25"/>
+  <xacro:property name="chassis_height" value="0.10"/>
+  <xacro:property name="chassis_mass" value="5.0"/>
+
+  <!-- Drive wheel parameters -->
+  <xacro:property name="wheel_radius" value="0.05"/>
+  <xacro:property name="wheel_width" value="0.025"/>
+  <xacro:property name="wheel_mass" value="0.5"/>
+  <xacro:property name="wheel_separation" value="0.20"/>
+
+  <!-- Caster wheel parameters -->
+  <xacro:property name="caster_radius" value="0.02"/>
+  <xacro:property name="caster_mass" value="0.1"/>
+
+  <!-- Ground clearance -->
+  <xacro:property name="ground_clearance" value="0.02"/>
+
+  <!-- ========================================== -->
+  <!-- INERTIA MACROS                              -->
+  <!-- ========================================== -->
+  <!--
+    Inertia tensors are required for physics simulation.
+    These macros calculate standard shapes' inertias.
+  -->
+
+  <xacro:macro name="box_inertia" params="m x y z">
+    <inertia ixx="${m*(y*y+z*z)/12.0}" ixy="0.0" ixz="0.0"
+             iyy="${m*(x*x+z*z)/12.0}" iyz="0.0"
+             izz="${m*(x*x+y*y)/12.0}"/>
+  </xacro:macro>
+
+  <xacro:macro name="cylinder_inertia" params="m r h">
+    <inertia ixx="${m*(3*r*r+h*h)/12.0}" ixy="0.0" ixz="0.0"
+             iyy="${m*(3*r*r+h*h)/12.0}" iyz="0.0"
+             izz="${m*r*r/2.0}"/>
+  </xacro:macro>
+
+  <xacro:macro name="sphere_inertia" params="m r">
+    <inertia ixx="${2*m*r*r/5.0}" ixy="0.0" ixz="0.0"
+             iyy="${2*m*r*r/5.0}" iyz="0.0"
+             izz="${2*m*r*r/5.0}"/>
+  </xacro:macro>
+
+  <!-- ========================================== -->
+  <!-- BASE FOOTPRINT (Ground Projection)          -->
+  <!-- ========================================== -->
+  <!--
+    base_footprint is a virtual frame at ground level.
+    Nav2 uses this as the robot's 2D position.
+
+    TF: base_footprint -> base_link (fixed, Z offset)
+  -->
+
+  <link name="base_footprint"/>
+
+  <joint name="base_footprint_joint" type="fixed">
+    <parent link="base_footprint"/>
+    <child link="base_link"/>
+    <origin xyz="0 0 ${wheel_radius + ground_clearance}" rpy="0 0 0"/>
+  </joint>
+
+  <!-- ========================================== -->
+  <!-- BASE LINK (Chassis)                         -->
+  <!-- ========================================== -->
+  <!--
+    Main robot body. All other links attach here.
+    This is the reference frame for most calculations.
+  -->
+
+  <link name="base_link">
+    <visual>
+      <origin xyz="0 0 ${chassis_height/2}" rpy="0 0 0"/>
+      <geometry>
+        <box size="${chassis_length} ${chassis_width} ${chassis_height}"/>
+      </geometry>
+      <material name="turtlebot_body">
+        <color rgba="0.2 0.6 0.8 1.0"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 ${chassis_height/2}" rpy="0 0 0"/>
+      <geometry>
+        <box size="${chassis_length} ${chassis_width} ${chassis_height}"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <origin xyz="0 0 ${chassis_height/2}" rpy="0 0 0"/>
+      <mass value="${chassis_mass}"/>
+      <xacro:box_inertia m="${chassis_mass}" x="${chassis_length}" y="${chassis_width}" z="${chassis_height}"/>
+    </inertial>
+  </link>
+
+  <!-- ========================================== -->
+  <!-- DRIVE WHEEL MACRO                           -->
+  <!-- ========================================== -->
+  <!--
+    Creates a drive wheel with continuous rotation.
+
+    Parameters:
+    - name: left_wheel or right_wheel
+    - y_offset: +/- wheel_separation/2
+  -->
+
+  <xacro:macro name="drive_wheel" params="name y_offset">
+    <joint name="${name}_joint" type="continuous">
+      <parent link="base_link"/>
+      <child link="${name}_link"/>
+      <origin xyz="0 ${y_offset} 0" rpy="0 0 0"/>
+      <axis xyz="0 1 0"/>
+      <limit effort="10.0" velocity="10.0"/>
+      <dynamics damping="0.1" friction="0.1"/>
+    </joint>
+
+    <link name="${name}_link">
+      <visual>
+        <origin xyz="0 0 0" rpy="${pi/2} 0 0"/>
+        <geometry>
+          <cylinder radius="${wheel_radius}" length="${wheel_width}"/>
+        </geometry>
+        <material name="wheel_black">
+          <color rgba="0.1 0.1 0.1 1.0"/>
+        </material>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="${pi/2} 0 0"/>
+        <geometry>
+          <cylinder radius="${wheel_radius}" length="${wheel_width}"/>
+        </geometry>
+      </collision>
+      <inertial>
+        <origin xyz="0 0 0" rpy="${pi/2} 0 0"/>
+        <mass value="${wheel_mass}"/>
+        <xacro:cylinder_inertia m="${wheel_mass}" r="${wheel_radius}" h="${wheel_width}"/>
+      </inertial>
+    </link>
+  </xacro:macro>
+
+  <!-- Create left and right drive wheels -->
+  <xacro:drive_wheel name="left_wheel" y_offset="${wheel_separation/2}"/>
+  <xacro:drive_wheel name="right_wheel" y_offset="${-wheel_separation/2}"/>
+
+  <!-- ========================================== -->
+  <!-- CASTER WHEEL MACRO                          -->
+  <!-- ========================================== -->
+  <!--
+    Creates a passive caster (spherical) for stability.
+    These don't drive, just support the robot.
+  -->
+
+  <xacro:macro name="caster_wheel" params="name x_offset">
+    <joint name="${name}_joint" type="fixed">
+      <parent link="base_link"/>
+      <child link="${name}_link"/>
+      <origin xyz="${x_offset} 0 ${-wheel_radius + caster_radius}" rpy="0 0 0"/>
+    </joint>
+
+    <link name="${name}_link">
+      <visual>
+        <geometry>
+          <sphere radius="${caster_radius}"/>
+        </geometry>
+        <material name="caster_gray">
+          <color rgba="0.5 0.5 0.5 1.0"/>
+        </material>
+      </visual>
+      <collision>
+        <geometry>
+          <sphere radius="${caster_radius}"/>
+        </geometry>
+      </collision>
+      <inertial>
+        <mass value="${caster_mass}"/>
+        <xacro:sphere_inertia m="${caster_mass}" r="${caster_radius}"/>
+      </inertial>
+    </link>
+  </xacro:macro>
+
+  <!-- Create front and rear casters -->
+  <xacro:caster_wheel name="front_caster" x_offset="${chassis_length/2 - caster_radius}"/>
+  <xacro:caster_wheel name="rear_caster" x_offset="${-chassis_length/2 + caster_radius}"/>
+
+</robot>

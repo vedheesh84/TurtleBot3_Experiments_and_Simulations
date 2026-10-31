@@ -1,0 +1,25 @@
+<!--
+  TurtleBot Hardware Interface Plugin Export
+  ==========================================
+
+  This file tells pluginlib about our hardware interface class.
+  The controller_manager uses this to dynamically load the plugin.
+
+  LEARNING NOTE:
+  This is the ros2_control plugin registration system.
+  When you specify the plugin name in URDF ros2_control tags,
+  pluginlib looks up this file to find the implementation class.
+-->
+
+<library path="turtlebot_hardware">
+  <class name="turtlebot_hardware/TurtlebotHardwareInterface"
+         type="turtlebot_hardware::TurtlebotHardwareInterface"
+         base_class_type="hardware_interface::SystemInterface">
+    <description>
+      Hardware interface for TurtleBot AMR differential drive robot.
+      Communicates with motor controller via serial port.
+      Provides velocity command interfaces for both wheels.
+      Reads position and velocity state from encoders.
+    </description>
+  </class>
+</library>

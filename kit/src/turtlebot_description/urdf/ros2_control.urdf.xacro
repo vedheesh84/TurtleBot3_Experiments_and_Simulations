@@ -1,0 +1,145 @@
+<?xml version="1.0"?>
+<!--
+  TurtleBot AMR ros2_control Configuration
+  ========================================
+
+  LEARNING OBJECTIVES (builds on learning_lifecycle):
+  - Understand ros2_control hardware interface abstraction
+  - See command/state interface definitions
+  - Learn hardware plugin vs simulation plugin switching
+  - Understand the controller manager pattern
+
+  KEY CONCEPTS:
+
+  1. HARDWARE INTERFACE
+     The hardware interface is the bridge between ros2_control
+     and the actual robot hardware (or simulation).
+
+  2. COMMAND INTERFACES
+     What the controller can WRITE to hardware:
+     - velocity: wheel angular velocity commands
+
+  3. STATE INTERFACES
+     What the controller can READ from hardware:
+     - position: wheel angular position (from encoders)
+     - velocity: wheel angular velocity (computed)
+
+  4. SIM_MODE SWITCHING
+     - sim_mode=false: Use real hardware interface (C++ plugin)
+     - sim_mode=true: Use Gazebo ros2_control plugin
+
+  FLOW:
+    Controller Manager
+         |
+         v
+    diff_drive_controller
+         |
+         v
+    Command/State Interfaces
+         |
+         v
+    Hardware Interface Plugin
+         |
+         v
+    Serial Communication / Gazebo
+-->
+
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- Argument to switch between hardware and simulation -->
+  <xacro:arg name="sim_mode" default="false"/>
+  <xacro:arg name="serial_port" default="/dev/ttyACM0"/>
+
+  <!-- ========================================== -->
+  <!-- HARDWARE MODE (Real Robot)                  -->
+  <!-- ========================================== -->
+  <!--
+    Used when sim_mode=false
+
+    The TurtlebotHardwareInterface plugin (C++) handles:
+    - Serial communication with motor controller
+    - Reading encoder counts and converting to position/velocity
+    - Writing velocity commands to motors
+
+    Parameters are passed to the plugin via <param> tags.
+  -->
+
+  <xacro:unless value="$(arg sim_mode)">
+    <ros2_control name="turtlebot_hardware" type="system">
+      <hardware>
+        <plugin>turtlebot_hardware/TurtlebotHardwareInterface</plugin>
+        <!-- Serial port configuration -->
+        <param name="serial_port">$(arg serial_port)</param>
+        <param name="baud_rate">115200</param>
+        <!-- Robot physical parameters -->
+        <param name="wheel_radius">0.05</param>
+        <param name="wheel_separation">0.20</param>
+        <param name="encoder_cpr">360</param>
+        <!-- Update rates -->
+        <param name="loop_rate">50</param>
+      </hardware>
+
+      <!-- Left wheel joint -->
+      <joint name="left_wheel_joint">
+        <command_interface name="velocity">
+          <param name="min">-10.0</param>
+          <param name="max">10.0</param>
+        </command_interface>
+        <state_interface name="position"/>
+        <state_interface name="velocity"/>
+      </joint>
+
+      <!-- Right wheel joint -->
+      <joint name="right_wheel_joint">
+        <command_interface name="velocity">
+          <param name="min">-10.0</param>
+          <param name="max">10.0</param>
+        </command_interface>
+        <state_interface name="position"/>
+        <state_interface name="velocity"/>
+      </joint>
+    </ros2_control>
+  </xacro:unless>
+
+  <!-- ========================================== -->
+  <!-- SIMULATION MODE (Gazebo)                    -->
+  <!-- ========================================== -->
+  <!--
+    Used when sim_mode=true
+
+    The GazeboSystem plugin simulates the hardware interface.
+    Gazebo physics engine handles the actual joint movement.
+
+    NOTE: The gazebo_ros2_control plugin in gazebo.urdf.xacro
+    loads the controllers defined in ros2_controllers.yaml.
+  -->
+
+  <xacro:if value="$(arg sim_mode)">
+    <ros2_control name="turtlebot_gazebo" type="system">
+      <hardware>
+        <plugin>gazebo_ros2_control/GazeboSystem</plugin>
+      </hardware>
+
+      <!-- Left wheel joint -->
+      <joint name="left_wheel_joint">
+        <command_interface name="velocity">
+          <param name="min">-10.0</param>
+          <param name="max">10.0</param>
+        </command_interface>
+        <state_interface name="position"/>
+        <state_interface name="velocity"/>
+      </joint>
+
+      <!-- Right wheel joint -->
+      <joint name="right_wheel_joint">
+        <command_interface name="velocity">
+          <param name="min">-10.0</param>
+          <param name="max">10.0</param>
+        </command_interface>
+        <state_interface name="position"/>
+        <state_interface name="velocity"/>
+      </joint>
+    </ros2_control>
+  </xacro:if>
+
+</robot>

@@ -1,0 +1,44 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>turtlebot_bringup</name>
+  <version>1.0.0</version>
+  <description>
+    TurtleBot AMR bringup and launch coordination.
+
+    This package orchestrates all robot subsystems:
+    - Robot description (URDF)
+    - Hardware interface / Simulation
+    - Localization (EKF)
+    - SLAM / Map-based localization
+    - Navigation (Nav2)
+
+    LEARNING OBJECTIVES (builds on learning_execution):
+    - Understand complex launch file composition
+    - See TimerAction for startup sequencing
+    - Learn conditional launching patterns
+    - Practice mode switching (sim vs hardware, SLAM vs nav)
+  </description>
+  <maintainer email="learner@ros2kit.local">ROS2 Kit Learner</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <exec_depend>turtlebot_description</exec_depend>
+  <exec_depend>turtlebot_hardware</exec_depend>
+  <exec_depend>turtlebot_localization</exec_depend>
+  <exec_depend>turtlebot_slam</exec_depend>
+  <exec_depend>turtlebot_navigation</exec_depend>
+
+  <exec_depend>launch</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+  <exec_depend>robot_state_publisher</exec_depend>
+  <exec_depend>controller_manager</exec_depend>
+  <exec_depend>gazebo_ros</exec_depend>
+  <exec_depend>rviz2</exec_depend>
+  <exec_depend>teleop_twist_keyboard</exec_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

@@ -1,0 +1,35 @@
+<!--
+Simple Navigation Behavior Tree
+
+LEARNING OBJECTIVES:
+- Understand behavior tree structure
+- See basic navigation flow
+- No recovery behaviors (for learning)
+
+FLOW:
+1. Compute path to goal
+2. Follow the path
+3. If either fails, navigation fails
+
+This is the simplest possible navigation BT.
+No recoveries, no replanning.
+-->
+<root BTCPP_format="4" main_tree_to_execute="MainTree">
+  <BehaviorTree ID="MainTree">
+    <PipelineSequence name="NavigateWithoutRecovery">
+      <!--
+        LEARNING: ComputePathToPose calls planner_server
+        Input: goal pose
+        Output: path (nav_msgs/Path)
+      -->
+      <ComputePathToPose goal="{goal}" path="{path}" planner_id="GridBased"/>
+
+      <!--
+        LEARNING: FollowPath calls controller_server
+        Input: path from planner
+        Output: velocity commands to robot
+      -->
+      <FollowPath path="{path}" controller_id="FollowPath"/>
+    </PipelineSequence>
+  </BehaviorTree>
+</root>

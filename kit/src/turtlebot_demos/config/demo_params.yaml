@@ -1,0 +1,24 @@
+# Demo Parameters
+# ===============
+#
+# Shared configuration for demo scripts
+
+demo_config:
+  ros__parameters:
+    # Failure injection settings
+    failure_injection:
+      enabled: false
+      mode: "none"  # none, tf, odom, costmap
+
+    # Visualization settings
+    visualization:
+      show_drift: true
+      show_covariance: false
+      update_rate: 2.0
+
+    # Goal sender defaults
+    goal_sender:
+      default_x: 1.0
+      default_y: 0.0
+      default_yaw: 0.0
+      timeout: 60.0

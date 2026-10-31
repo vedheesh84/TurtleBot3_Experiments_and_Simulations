@@ -1,0 +1,27 @@
+# Build and install artifacts
+build/
+install/
+log/
+.colcon/
+
+# Python compiled artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+
+# ROS2 log files
+*.log
+*.bag
+
+# Archives and big binaries
+*.zip
+*.tar.gz
+*.iso
+
+# IDE and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

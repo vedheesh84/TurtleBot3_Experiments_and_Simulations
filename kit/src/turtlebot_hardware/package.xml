@@ -1,0 +1,47 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>turtlebot_hardware</name>
+  <version>1.0.0</version>
+  <description>
+    TurtleBot AMR hardware interface for ros2_control.
+
+    This package provides:
+    - C++ hardware interface plugin for differential drive
+    - Serial communication with motor controller
+    - Encoder reading and velocity command writing
+    - Controller configuration (diff_drive_controller)
+
+    LEARNING OBJECTIVES (builds on learning_lifecycle):
+    - Understand ros2_control hardware interface lifecycle
+    - See how command/state interfaces work
+    - Learn controller manager architecture
+    - Practice C++ in ROS2 (minimal adapter pattern)
+
+    The hardware interface uses lifecycle callbacks:
+    - on_init: Parse URDF parameters
+    - on_configure: Open serial port
+    - on_activate: Start communication
+    - on_deactivate: Stop communication
+  </description>
+  <maintainer email="learner@ros2kit.local">ROS2 Kit Learner</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <depend>rclcpp</depend>
+  <depend>rclcpp_lifecycle</depend>
+  <depend>hardware_interface</depend>
+  <depend>pluginlib</depend>
+  <depend>controller_manager</depend>
+  <depend>diff_drive_controller</depend>
+  <depend>joint_state_broadcaster</depend>
+
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>ament_lint_common</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+    <hardware_interface plugin="${prefix}/turtlebot_hardware.xml"/>
+  </export>
+</package>

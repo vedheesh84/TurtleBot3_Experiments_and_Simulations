@@ -1,0 +1,299 @@
+<?xml version="1.0"?>
+<!--
+  TurtleBot AMR Gazebo Plugins
+  ============================
+
+  LEARNING OBJECTIVES (builds on learning_simulation):
+  - Understand Gazebo sensor plugins
+  - See how sim topics map to real hardware topics
+  - Learn about physics properties (friction, damping)
+  - Understand ros2_control Gazebo integration
+
+  PLUGINS INCLUDED:
+
+  1. Differential Drive (libgazebo_ros_diff_drive.so)
+     - Alternative to ros2_control for base motion
+     - Publishes odometry directly (NOT used when ros2_control active)
+     - DISABLED: We use ros2_control + diff_drive_controller instead
+
+  2. LiDAR Sensor (libgazebo_ros_ray_sensor.so)
+     - Simulates 2D LiDAR
+     - Publishes /scan topic
+     - Configurable range, samples, noise
+
+  3. IMU Sensor (libgazebo_ros_imu_sensor.so)
+     - Simulates 6-axis IMU
+     - Publishes /imu/data topic
+     - Configurable noise parameters
+
+  4. Camera Sensor (libgazebo_ros_camera.so)
+     - Simulates RGB camera
+     - Publishes /camera/image_raw and /camera/camera_info
+
+  5. Joint State Publisher (libgazebo_ros_joint_state_publisher.so)
+     - Publishes joint states for caster wheels
+     - Drive wheels published by ros2_control
+
+  6. ros2_control Plugin (libgazebo_ros2_control.so)
+     - Bridges ros2_control to Gazebo physics
+     - Loads controllers from YAML config
+-->
+
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- ========================================== -->
+  <!-- MATERIAL COLORS (Gazebo-specific)           -->
+  <!-- ========================================== -->
+
+  <gazebo reference="base_link">
+    <material>Gazebo/SkyBlue</material>
+  </gazebo>
+
+  <gazebo reference="left_wheel_link">
+    <material>Gazebo/DarkGrey</material>
+    <mu1>1.0</mu1>
+    <mu2>1.0</mu2>
+    <kp>1000000.0</kp>
+    <kd>100.0</kd>
+  </gazebo>
+
+  <gazebo reference="right_wheel_link">
+    <material>Gazebo/DarkGrey</material>
+    <mu1>1.0</mu1>
+    <mu2>1.0</mu2>
+    <kp>1000000.0</kp>
+    <kd>100.0</kd>
+  </gazebo>
+
+  <gazebo reference="front_caster_link">
+    <material>Gazebo/Grey</material>
+    <mu1>0.0</mu1>
+    <mu2>0.0</mu2>
+  </gazebo>
+
+  <gazebo reference="rear_caster_link">
+    <material>Gazebo/Grey</material>
+    <mu1>0.0</mu1>
+    <mu2>0.0</mu2>
+  </gazebo>
+
+  <gazebo reference="laser_frame">
+    <material>Gazebo/Black</material>
+  </gazebo>
+
+  <gazebo reference="imu_link">
+    <material>Gazebo/Green</material>
+  </gazebo>
+
+  <gazebo reference="camera_link">
+    <material>Gazebo/Blue</material>
+  </gazebo>
+
+  <!-- ========================================== -->
+  <!-- LIDAR SENSOR PLUGIN                         -->
+  <!-- ========================================== -->
+  <!--
+    Simulates a 2D LiDAR scanner.
+
+    Configuration matches typical budget LiDARs:
+    - 360 samples per scan
+    - 10 Hz update rate
+    - 0.1m to 12m range
+    - Gaussian noise
+
+    Output Topic: /scan (sensor_msgs/LaserScan)
+  -->
+
+  <gazebo reference="laser_frame">
+    <sensor type="ray" name="lidar_sensor">
+      <pose>0 0 0 0 0 0</pose>
+      <visualize>false</visualize>
+      <update_rate>10</update_rate>
+
+      <ray>
+        <scan>
+          <horizontal>
+            <samples>360</samples>
+            <resolution>1</resolution>
+            <min_angle>-3.14159265359</min_angle>
+            <max_angle>3.14159265359</max_angle>
+          </horizontal>
+        </scan>
+
+        <range>
+          <min>0.10</min>
+          <max>12.0</max>
+          <resolution>0.01</resolution>
+        </range>
+
+        <noise>
+          <type>gaussian</type>
+          <mean>0.0</mean>
+          <stddev>0.01</stddev>
+        </noise>
+      </ray>
+
+      <plugin name="lidar_plugin" filename="libgazebo_ros_ray_sensor.so">
+        <ros>
+          <namespace>/</namespace>
+          <remapping>~/out:=scan</remapping>
+        </ros>
+        <output_type>sensor_msgs/LaserScan</output_type>
+        <frame_name>laser_frame</frame_name>
+      </plugin>
+    </sensor>
+  </gazebo>
+
+  <!-- ========================================== -->
+  <!-- IMU SENSOR PLUGIN                           -->
+  <!-- ========================================== -->
+  <!--
+    Simulates a 6-axis IMU (accelerometer + gyroscope).
+
+    Configuration:
+    - 50 Hz update rate
+    - Gaussian noise on all measurements
+    - Publishes orientation (from Gazebo ground truth)
+
+    Output Topic: /imu/data (sensor_msgs/Imu)
+
+    LEARNING NOTE:
+    In simulation, the IMU is "perfect" (from ground truth).
+    Real IMUs have bias drift - the EKF handles this.
+  -->
+
+  <gazebo reference="imu_link">
+    <sensor type="imu" name="imu_sensor">
+      <always_on>true</always_on>
+      <update_rate>50</update_rate>
+      <visualize>false</visualize>
+
+      <imu>
+        <angular_velocity>
+          <x>
+            <noise type="gaussian">
+              <mean>0.0</mean>
+              <stddev>0.0002</stddev>
+            </noise>
+          </x>
+          <y>
+            <noise type="gaussian">
+              <mean>0.0</mean>
+              <stddev>0.0002</stddev>
+            </noise>
+          </y>
+          <z>
+            <noise type="gaussian">
+              <mean>0.0</mean>
+              <stddev>0.0002</stddev>
+            </noise>
+          </z>
+        </angular_velocity>
+        <linear_acceleration>
+          <x>
+            <noise type="gaussian">
+              <mean>0.0</mean>
+              <stddev>0.017</stddev>
+            </noise>
+          </x>
+          <y>
+            <noise type="gaussian">
+              <mean>0.0</mean>
+              <stddev>0.017</stddev>
+            </noise>
+          </y>
+          <z>
+            <noise type="gaussian">
+              <mean>0.0</mean>
+              <stddev>0.017</stddev>
+            </noise>
+          </z>
+        </linear_acceleration>
+      </imu>
+
+      <plugin name="imu_plugin" filename="libgazebo_ros_imu_sensor.so">
+        <ros>
+          <namespace>/</namespace>
+          <remapping>~/out:=imu/data</remapping>
+        </ros>
+        <initial_orientation_as_reference>false</initial_orientation_as_reference>
+        <frame_name>imu_link</frame_name>
+      </plugin>
+    </sensor>
+  </gazebo>
+
+  <!-- ========================================== -->
+  <!-- CAMERA SENSOR PLUGIN                        -->
+  <!-- ========================================== -->
+  <!--
+    Simulates an RGB camera.
+
+    Configuration:
+    - 640x480 resolution
+    - 30 Hz update rate
+    - 80 degree horizontal FOV
+
+    Output Topics:
+    - /camera/image_raw (sensor_msgs/Image)
+    - /camera/camera_info (sensor_msgs/CameraInfo)
+  -->
+
+  <gazebo reference="camera_link">
+    <sensor type="camera" name="camera_sensor">
+      <update_rate>30.0</update_rate>
+      <visualize>false</visualize>
+
+      <camera name="front_camera">
+        <horizontal_fov>1.3962634</horizontal_fov>
+        <image>
+          <width>640</width>
+          <height>480</height>
+          <format>R8G8B8</format>
+        </image>
+        <clip>
+          <near>0.02</near>
+          <far>100</far>
+        </clip>
+        <noise>
+          <type>gaussian</type>
+          <mean>0.0</mean>
+          <stddev>0.007</stddev>
+        </noise>
+      </camera>
+
+      <plugin name="camera_plugin" filename="libgazebo_ros_camera.so">
+        <ros>
+          <namespace>/</namespace>
+          <remapping>~/image_raw:=camera/image_raw</remapping>
+          <remapping>~/camera_info:=camera/camera_info</remapping>
+        </ros>
+        <frame_name>camera_optical_link</frame_name>
+      </plugin>
+    </sensor>
+  </gazebo>
+
+  <!-- ========================================== -->
+  <!-- ROS2 CONTROL GAZEBO PLUGIN                  -->
+  <!-- ========================================== -->
+  <!--
+    Bridges ros2_control to Gazebo physics.
+
+    This plugin:
+    1. Reads robot_description from robot_state_publisher
+    2. Loads controllers from the YAML config file
+    3. Applies commanded velocities to Gazebo joints
+    4. Reads joint states from Gazebo physics
+
+    NOTE: The controllers are defined in:
+    turtlebot_hardware/config/ros2_controllers.yaml
+  -->
+
+  <gazebo>
+    <plugin filename="libgazebo_ros2_control.so" name="gazebo_ros2_control">
+      <robot_param>robot_description</robot_param>
+      <robot_param_node>robot_state_publisher</robot_param_node>
+      <parameters>$(find turtlebot_hardware)/config/ros2_controllers.yaml</parameters>
+    </plugin>
+  </gazebo>
+
+</robot>

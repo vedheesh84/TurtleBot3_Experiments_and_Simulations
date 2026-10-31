@@ -1,0 +1,154 @@
+# Robot Localization EKF Configuration
+# =====================================
+#
+# LEARNING OBJECTIVES:
+# - Understand sensor fusion with Extended Kalman Filter
+# - See how to configure sensor inputs
+# - Learn covariance tuning principles
+#
+# WHY SENSOR FUSION?
+# ------------------
+# Wheel odometry alone drifts over time (especially heading).
+# IMU provides good orientation but integrates noise.
+# EKF combines both to get best of both worlds:
+# - Wheel odometry: Good for position
+# - IMU: Good for orientation and angular velocity
+#
+# SENSOR INPUT CONFIGURATION
+# --------------------------
+# Each sensor's config is a 15-element boolean array:
+# [x, y, z, roll, pitch, yaw, vx, vy, vz, vroll, vpitch, vyaw, ax, ay, az]
+#
+# true = use this measurement from this sensor
+# false = ignore this measurement
+#
+# RULE: Each state should come from exactly ONE sensor.
+# If two sensors measure the same thing, pick the more reliable one.
+
+ekf_filter_node:
+  ros__parameters:
+    # ========================================
+    # GENERAL SETTINGS
+    # ========================================
+    # Update frequency (Hz)
+    frequency: 50.0
+
+    # Sensor timeout (seconds)
+    # If no data received, predict-only mode
+    sensor_timeout: 0.1
+
+    # 2D mode for ground robots
+    # Ignores z, roll, pitch (reduces computation)
+    two_d_mode: true
+
+    # ========================================
+    # FRAME CONFIGURATION
+    # ========================================
+    map_frame: map
+    odom_frame: odom
+    base_link_frame: base_link
+    world_frame: odom  # EKF operates in odom frame
+
+    # Publish odom->base_link TF
+    # CRITICAL: This must be true because diff_drive_controller
+    # has enable_odom_tf: false
+    publish_tf: true
+
+    # TF transform timeout
+    transform_time_offset: 0.0
+    transform_timeout: 0.0
+
+    # ========================================
+    # WHEEL ODOMETRY INPUT
+    # ========================================
+    # Source: /diff_drive_controller/odom
+    # Trust: Linear velocity (vx) and angular velocity (vyaw)
+    # Don't trust: Position (we integrate velocity instead)
+    # Don't trust: Orientation (IMU is better)
+
+    odom0: /diff_drive_controller/odom
+
+    # [x, y, z, roll, pitch, yaw, vx, vy, vz, vroll, vpitch, vyaw, ax, ay, az]
+    odom0_config: [false, false, false,   # Position: NO (integrate vel)
+                   false, false, false,   # Orientation: NO (use IMU)
+                   true, false, false,    # Linear vel: YES (vx only)
+                   false, false, true,    # Angular vel: YES (vyaw only)
+                   false, false, false]   # Accel: NO
+
+    odom0_differential: false
+    odom0_relative: false
+    odom0_queue_size: 10
+
+    # ========================================
+    # IMU INPUT
+    # ========================================
+    # Source: /imu/data
+    # Trust: Orientation (roll, pitch, yaw)
+    # Trust: Angular velocity (all axes)
+    # Don't trust: Linear acceleration (too noisy)
+
+    imu0: /imu/data
+
+    # [x, y, z, roll, pitch, yaw, vx, vy, vz, vroll, vpitch, vyaw, ax, ay, az]
+    imu0_config: [false, false, false,    # Position: NO
+                  true, true, true,        # Orientation: YES (all angles)
+                  false, false, false,     # Linear vel: NO
+                  true, true, true,        # Angular vel: YES (all axes)
+                  false, false, false]     # Accel: NO (too noisy)
+
+    imu0_differential: false
+    imu0_relative: false
+    imu0_remove_gravitational_acceleration: true
+    imu0_queue_size: 10
+
+    # ========================================
+    # PROCESS NOISE COVARIANCE
+    # ========================================
+    # How much the state is expected to change between updates.
+    # Higher values = less confident in motion model
+    # Lower values = more confident in motion model
+    #
+    # These are the diagonal elements of a 15x15 matrix.
+    # Order: x, y, z, roll, pitch, yaw, vx, vy, vz, vroll, vpitch, vyaw, ax, ay, az
+
+    process_noise_covariance: [
+      0.05, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,   # x
+      0.0, 0.05, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,   # y
+      0.0, 0.0, 0.06, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,   # z
+      0.0, 0.0, 0.0, 0.03, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,   # roll
+      0.0, 0.0, 0.0, 0.0, 0.03, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,   # pitch
+      0.0, 0.0, 0.0, 0.0, 0.0, 0.06, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,   # yaw
+      0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.025, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,  # vx
+      0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.025, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,  # vy
+      0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.04, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,   # vz
+      0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.01, 0.0, 0.0, 0.0, 0.0, 0.0,   # vroll
+      0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.01, 0.0, 0.0, 0.0, 0.0,   # vpitch
+      0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.02, 0.0, 0.0, 0.0,   # vyaw
+      0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.01, 0.0, 0.0,   # ax
+      0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.01, 0.0,   # ay
+      0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.015   # az
+    ]
+
+    # ========================================
+    # INITIAL ESTIMATE COVARIANCE
+    # ========================================
+    # Uncertainty in initial state.
+    # Large values = very uncertain at start.
+
+    initial_estimate_covariance: [
+      1e-9, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+      0.0, 1e-9, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+      0.0, 0.0, 1e-9, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+      0.0, 0.0, 0.0, 1e-9, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+      0.0, 0.0, 0.0, 0.0, 1e-9, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+      0.0, 0.0, 0.0, 0.0, 0.0, 1e-9, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+      0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1e-9, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+      0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1e-9, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+      0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1e-9, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+      0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1e-9, 0.0, 0.0, 0.0, 0.0, 0.0,
+      0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1e-9, 0.0, 0.0, 0.0, 0.0,
+      0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1e-9, 0.0, 0.0, 0.0,
+      0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1e-9, 0.0, 0.0,
+      0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1e-9, 0.0,
+      0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1e-9
+    ]

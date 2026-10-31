@@ -1,0 +1,70 @@
+<!--
+Navigation with Recovery Behavior Tree
+
+LEARNING OBJECTIVES:
+- Understand recovery behavior patterns
+- See how BT handles failures
+- Learn fallback and retry mechanisms
+
+FLOW:
+1. Try to navigate to goal
+2. If planning fails -> clear costmap -> retry
+3. If following fails -> spin -> backup -> retry
+4. After max retries, fail
+
+This is a simplified version of Nav2's default BT.
+-->
+<root BTCPP_format="4" main_tree_to_execute="MainTree">
+  <BehaviorTree ID="MainTree">
+    <RecoveryNode number_of_retries="3" name="NavigateWithRecovery">
+      <!--
+        Main navigation sequence (try this first)
+      -->
+      <PipelineSequence name="NavigateSequence">
+        <RateController hz="1.0">
+          <RecoveryNode number_of_retries="1" name="ComputePathWithRecovery">
+            <ComputePathToPose goal="{goal}" path="{path}" planner_id="GridBased"/>
+            <!--
+              LEARNING: If planning fails, clear the costmap
+              Sometimes temporary obstacles block path planning
+            -->
+            <ClearEntireCostmap name="ClearGlobalCostmap" service_name="global_costmap/clear_entirely_global_costmap"/>
+          </RecoveryNode>
+        </RateController>
+
+        <RecoveryNode number_of_retries="1" name="FollowPathWithRecovery">
+          <FollowPath path="{path}" controller_id="FollowPath"/>
+          <!--
+            LEARNING: If following fails, try spinning
+            Spinning clears local obstacles from sensors
+          -->
+          <Spin spin_dist="1.57"/>
+        </RecoveryNode>
+      </PipelineSequence>
+
+      <!--
+        Recovery sequence (if navigation fails)
+      -->
+      <SequenceStar name="RecoverySequence">
+        <!--
+          LEARNING: First try to spin in place
+          This updates sensor readings and clears false obstacles
+        -->
+        <Spin spin_dist="1.57"/>
+
+        <!--
+          LEARNING: Then backup a bit
+          Gets robot away from obstacle
+        -->
+        <BackUp backup_dist="0.3" backup_speed="0.1"/>
+
+        <!--
+          LEARNING: Clear costmaps to reset
+          Removes any lingering obstacle marks
+        -->
+        <ClearEntireCostmap name="ClearLocalCostmap" service_name="local_costmap/clear_entirely_local_costmap"/>
+        <ClearEntireCostmap name="ClearGlobalCostmap" service_name="global_costmap/clear_entirely_global_costmap"/>
+      </SequenceStar>
+    </RecoveryNode>
+  </BehaviorTree>
+</root>

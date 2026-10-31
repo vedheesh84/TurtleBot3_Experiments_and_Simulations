@@ -1,0 +1,133 @@
+# TurtleBot AMR Controller Configuration
+# =======================================
+#
+# LEARNING OBJECTIVES (builds on learning_lifecycle):
+# - Understand controller_manager configuration
+# - See diff_drive_controller parameters
+# - Learn about joint_state_broadcaster
+# - Practice parameter tuning
+#
+# ARCHITECTURE:
+#
+#   controller_manager
+#   ├── diff_drive_controller (active)
+#   │   ├── Subscribes: /cmd_vel
+#   │   ├── Publishes: /diff_drive_controller/odom
+#   │   └── Commands: wheel velocity interfaces
+#   │
+#   └── joint_state_broadcaster (active)
+#       └── Publishes: /joint_states
+#
+# KEY PARAMETERS:
+#
+# 1. wheel_separation: Distance between wheel centers (meters)
+#    - Too small: Robot turns too fast
+#    - Too large: Robot turns too slow
+#
+# 2. wheel_radius: Wheel radius (meters)
+#    - Too small: Robot moves faster than commanded
+#    - Too large: Robot moves slower than commanded
+#
+# 3. velocity limits: Safety bounds
+#    - Prevents damage from excessive speed
+#
+# IMPORTANT: enable_odom_tf is FALSE
+# We use robot_localization EKF to publish odom->base_link TF
+# This allows sensor fusion with IMU
+
+controller_manager:
+  ros__parameters:
+    # Control loop rate (Hz)
+    # Higher = smoother but more CPU
+    # 50 Hz is typical for mobile robots
+    update_rate: 50
+
+    # Controllers to load
+    diff_drive_controller:
+      type: diff_drive_controller/DiffDriveController
+
+    joint_state_broadcaster:
+      type: joint_state_broadcaster/JointStateBroadcaster
+
+# ===========================================
+# DIFFERENTIAL DRIVE CONTROLLER
+# ===========================================
+# Converts /cmd_vel (Twist) to wheel velocities
+# Publishes odometry from wheel encoders
+
+diff_drive_controller:
+  ros__parameters:
+    # Joint names (must match URDF)
+    left_wheel_names: ["left_wheel_joint"]
+    right_wheel_names: ["right_wheel_joint"]
+
+    # Robot physical parameters
+    # CRITICAL: Must match actual robot!
+    wheel_separation: 0.20  # meters (distance between wheels)
+    wheel_radius: 0.05      # meters
+
+    # Odometry configuration
+    publish_rate: 50.0      # Hz
+    odom_frame_id: odom
+    base_frame_id: base_link
+
+    # Odometry covariance (6x6 diagonal)
+    # [x, y, z, roll, pitch, yaw]
+    # Lower values = more confident
+    # Increase if odometry seems overconfident
+    pose_covariance_diagonal: [0.01, 0.01, 0.0, 0.0, 0.0, 0.03]
+    twist_covariance_diagonal: [0.01, 0.0, 0.0, 0.0, 0.0, 0.03]
+
+    # TF PUBLISHING
+    # IMPORTANT: Disabled because robot_localization EKF
+    # publishes the odom->base_link transform
+    # This allows IMU fusion for better orientation
+    enable_odom_tf: false
+
+    # Velocity limits (safety)
+    linear.x.has_velocity_limits: true
+    linear.x.max_velocity: 0.5          # m/s forward
+    linear.x.min_velocity: -0.3         # m/s backward
+    linear.x.has_acceleration_limits: true
+    linear.x.max_acceleration: 1.0      # m/s^2
+    linear.x.max_deceleration: 1.5      # m/s^2 (braking)
+
+    angular.z.has_velocity_limits: true
+    angular.z.max_velocity: 2.0         # rad/s
+    angular.z.has_acceleration_limits: true
+    angular.z.max_acceleration: 2.5     # rad/s^2
+
+    # Wheel velocity limits
+    # Computed from linear/angular limits
+    # wheel_vel = (linear + angular * wheel_sep/2) / wheel_radius
+
+    # Command timeout
+    # Stop if no cmd_vel received for this duration
+    cmd_vel_timeout: 0.5  # seconds
+
+    # Use stamped twist messages?
+    # false = geometry_msgs/Twist
+    # true = geometry_msgs/TwistStamped
+    use_stamped_vel: false
+
+    # Preserve turning radius when limiting velocity?
+    preserve_turning_radius: true
+
+# ===========================================
+# JOINT STATE BROADCASTER
+# ===========================================
+# Publishes joint states for robot_state_publisher
+# Required for TF tree visualization
+
+joint_state_broadcaster:
+  ros__parameters:
+    # Joints to broadcast
+    # All joints defined in ros2_control URDF block
+    joints:
+      - left_wheel_joint
+      - right_wheel_joint
+
+    # Interfaces to read
+    interfaces:
+      - position
+      - velocity

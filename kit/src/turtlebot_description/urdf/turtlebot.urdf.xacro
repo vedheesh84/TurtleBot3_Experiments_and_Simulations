@@ -1,0 +1,87 @@
+<?xml version="1.0"?>
+<!--
+  TurtleBot AMR - Main Robot Assembly
+  ===================================
+
+  This is the top-level URDF file that assembles the complete robot.
+
+  LEARNING OBJECTIVES:
+  - Understand xacro modular structure
+  - See how robot components are composed
+  - Learn about xacro arguments for configuration
+
+  USAGE:
+
+  1. View in RViz (no Gazebo):
+     ros2 launch turtlebot_description display.launch.py
+
+  2. Simulation mode:
+     ros2 launch turtlebot_bringup simulation.launch.py
+
+  3. Hardware mode:
+     ros2 launch turtlebot_bringup hardware.launch.py
+
+  XACRO ARGUMENTS:
+
+  - sim_mode (default: false)
+    Set to true for Gazebo simulation.
+    This switches the ros2_control hardware interface.
+
+  TF TREE (when fully assembled):
+
+    base_footprint
+         |
+         v
+      base_link
+      /   |   \
+     /    |    \
+    v     v     v
+  left  right  sensors...
+  wheel wheel
+         |
+         v
+    laser_frame, imu_link, camera_link
+
+  In navigation mode (with SLAM or AMCL):
+
+    map
+     |
+     v
+    odom  (published by EKF or SLAM)
+     |
+     v
+    base_link
+     |
+    ... (as above)
+-->
+
+<robot name="turtlebot" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- ========================================== -->
+  <!-- ARGUMENTS                                   -->
+  <!-- ========================================== -->
+
+  <!-- Simulation mode switch -->
+  <xacro:arg name="sim_mode" default="false"/>
+  <!-- Serial port for physical or pseudo-hardware microcontroller -->
+  <xacro:arg name="serial_port" default="/dev/ttyACM0"/>
+
+  <!-- ========================================== -->
+  <!-- INCLUDE COMPONENT FILES                     -->
+  <!-- ========================================== -->
+
+  <!-- Base: Chassis and drive wheels -->
+  <xacro:include filename="$(find turtlebot_description)/urdf/base.urdf.xacro"/>
+
+  <!-- Sensors: LiDAR, IMU, Camera -->
+  <xacro:include filename="$(find turtlebot_description)/urdf/sensors.urdf.xacro"/>
+
+  <!-- ros2_control: Hardware interface definitions -->
+  <xacro:include filename="$(find turtlebot_description)/urdf/ros2_control.urdf.xacro"/>
+
+  <!-- Gazebo: Simulation plugins (only in sim_mode) -->
+  <xacro:if value="$(arg sim_mode)">
+    <xacro:include filename="$(find turtlebot_description)/urdf/gazebo.urdf.xacro"/>
+  </xacro:if>
+
+</robot>

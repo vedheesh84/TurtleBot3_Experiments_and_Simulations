@@ -1,0 +1,36 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>turtlebot_navigation</name>
+  <version>1.0.0</version>
+  <description>
+    TurtleBot AMR Nav2 configuration and launch files.
+
+    LEARNING OBJECTIVES:
+    - Understand Nav2 architecture (planner, controller, recoveries)
+    - See costmap configuration (layers, inflation)
+    - Learn behavior tree navigation
+    - Practice lifecycle management
+  </description>
+  <maintainer email="learner@ros2kit.local">ROS2 Kit Learner</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <!-- Nav2 Stack -->
+  <exec_depend>nav2_bringup</exec_depend>
+  <exec_depend>nav2_bt_navigator</exec_depend>
+  <exec_depend>nav2_planner</exec_depend>
+  <exec_depend>nav2_controller</exec_depend>
+  <exec_depend>nav2_behaviors</exec_depend>
+  <exec_depend>nav2_lifecycle_manager</exec_depend>
+  <exec_depend>nav2_map_server</exec_depend>
+  <exec_depend>nav2_costmap_2d</exec_depend>
+
+  <!-- Launch -->
+  <exec_depend>launch</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

@@ -1,0 +1,192 @@
+<?xml version="1.0"?>
+<!--
+  TurtleBot AMR Sensors - LiDAR, IMU, Camera
+  ==========================================
+
+  LEARNING OBJECTIVES (builds on learning_tf):
+  - Understand sensor frame placement
+  - See how sensor TF relates to base_link
+  - Learn optical frame conventions (camera)
+  - Understand sensor parameters
+
+  Sensors Included:
+  - 2D LiDAR (360 degree)
+  - IMU (6-axis)
+  - RGB Camera (optional)
+
+  TF Tree Addition:
+    base_link
+    ├── laser_frame (LiDAR)
+    ├── imu_link (IMU)
+    └── camera_link -> camera_optical_link
+-->
+
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- ========================================== -->
+  <!-- SENSOR PARAMETERS                           -->
+  <!-- ========================================== -->
+
+  <!-- LiDAR parameters -->
+  <xacro:property name="lidar_radius" value="0.04"/>
+  <xacro:property name="lidar_height" value="0.05"/>
+  <xacro:property name="lidar_mass" value="0.2"/>
+  <xacro:property name="lidar_x" value="0.0"/>
+  <xacro:property name="lidar_z" value="0.15"/>
+
+  <!-- IMU parameters -->
+  <xacro:property name="imu_size" value="0.02"/>
+  <xacro:property name="imu_mass" value="0.05"/>
+
+  <!-- Camera parameters -->
+  <xacro:property name="camera_width" value="0.04"/>
+  <xacro:property name="camera_height" value="0.03"/>
+  <xacro:property name="camera_depth" value="0.03"/>
+  <xacro:property name="camera_mass" value="0.1"/>
+
+  <!-- ========================================== -->
+  <!-- LIDAR SENSOR                                -->
+  <!-- ========================================== -->
+  <!--
+    2D LiDAR mounted on top of chassis.
+
+    Frame: laser_frame
+    - X points forward (scan angle 0)
+    - Z points up
+    - Topic: /scan (sensor_msgs/LaserScan)
+
+    This is the primary sensor for SLAM and navigation.
+  -->
+
+  <joint name="laser_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="laser_frame"/>
+    <origin xyz="${lidar_x} 0 ${lidar_z}" rpy="0 0 0"/>
+  </joint>
+
+  <link name="laser_frame">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <cylinder radius="${lidar_radius}" length="${lidar_height}"/>
+      </geometry>
+      <material name="lidar_black">
+        <color rgba="0.1 0.1 0.1 1.0"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <cylinder radius="${lidar_radius}" length="${lidar_height}"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="${lidar_mass}"/>
+      <xacro:cylinder_inertia m="${lidar_mass}" r="${lidar_radius}" h="${lidar_height}"/>
+    </inertial>
+  </link>
+
+  <!-- ========================================== -->
+  <!-- IMU SENSOR                                  -->
+  <!-- ========================================== -->
+  <!--
+    6-axis IMU (accelerometer + gyroscope).
+    Mounted at center of base for best measurements.
+
+    Frame: imu_link
+    - X forward, Y left, Z up (REP-103 convention)
+    - Topic: /imu/data (sensor_msgs/Imu)
+
+    Used by robot_localization EKF for orientation.
+
+    LEARNING NOTE:
+    The IMU provides angular velocity and orientation,
+    which compensates for wheel odometry drift.
+  -->
+
+  <joint name="imu_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="imu_link"/>
+    <origin xyz="0 0 ${chassis_height/2}" rpy="0 0 0"/>
+  </joint>
+
+  <link name="imu_link">
+    <visual>
+      <geometry>
+        <box size="${imu_size} ${imu_size} ${imu_size}"/>
+      </geometry>
+      <material name="imu_green">
+        <color rgba="0.2 0.8 0.2 1.0"/>
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="${imu_size} ${imu_size} ${imu_size}"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="${imu_mass}"/>
+      <xacro:box_inertia m="${imu_mass}" x="${imu_size}" y="${imu_size}" z="${imu_size}"/>
+    </inertial>
+  </link>
+
+  <!-- ========================================== -->
+  <!-- CAMERA SENSOR (Optional)                    -->
+  <!-- ========================================== -->
+  <!--
+    RGB Camera for visual perception.
+
+    Frame: camera_link (physical mount)
+    Frame: camera_optical_link (image plane)
+
+    IMPORTANT: camera_optical_link follows REP-103:
+    - Z points INTO the image (forward)
+    - X points right
+    - Y points down
+
+    This rotation is standard for image processing.
+
+    Topics:
+    - /camera/image_raw (sensor_msgs/Image)
+    - /camera/camera_info (sensor_msgs/CameraInfo)
+  -->
+
+  <joint name="camera_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="camera_link"/>
+    <origin xyz="${chassis_length/2} 0 ${chassis_height/2}" rpy="0 0 0"/>
+  </joint>
+
+  <link name="camera_link">
+    <visual>
+      <origin xyz="${camera_depth/2} 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="${camera_depth} ${camera_width} ${camera_height}"/>
+      </geometry>
+      <material name="camera_blue">
+        <color rgba="0.2 0.2 0.8 1.0"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="${camera_depth/2} 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="${camera_depth} ${camera_width} ${camera_height}"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="${camera_mass}"/>
+      <xacro:box_inertia m="${camera_mass}" x="${camera_depth}" y="${camera_width}" z="${camera_height}"/>
+    </inertial>
+  </link>
+
+  <!-- Camera optical frame (standard orientation for image processing) -->
+  <joint name="camera_optical_joint" type="fixed">
+    <parent link="camera_link"/>
+    <child link="camera_optical_link"/>
+    <!-- Rotate to standard optical frame: Z forward, X right, Y down -->
+    <origin xyz="0 0 0" rpy="${-pi/2} 0 ${-pi/2}"/>
+  </joint>
+
+  <link name="camera_optical_link"/>
+
+</robot>

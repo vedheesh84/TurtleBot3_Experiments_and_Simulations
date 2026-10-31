@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>turtlebot_localization</name>
+  <version>1.0.0</version>
+  <description>
+    TurtleBot AMR sensor fusion with robot_localization EKF.
+
+    LEARNING OBJECTIVES:
+    - Understand Extended Kalman Filter for sensor fusion
+    - See how wheel odometry and IMU are combined
+    - Learn covariance configuration
+    - Practice diagnosing localization issues
+  </description>
+  <maintainer email="learner@ros2kit.local">ROS2 Kit Learner</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <exec_depend>robot_localization</exec_depend>
+  <exec_depend>launch</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>
