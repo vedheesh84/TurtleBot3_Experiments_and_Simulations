@@ -69,7 +69,7 @@ Detailed system design, data flows, and coupling hotspot analyses are documented
 
 ```bash
 # 1. Navigate to workspace and build
-cd "02 — Domains/ROS2/AMR_ws/turtlebot3_ws"
+cd "03 — Projects & Experiments/
 colcon build --symlink-install
 source install/setup.bash
 
@@ -100,4 +100,4 @@ To explore all 25 curriculum concepts running inside this embodied mobile robot,
 
 ## 6. License & Origin
 
-Developed by ROBOTIS and adapted for the Intelligent Systems Knowledge Ecosystem under the Apache 2.0 License.
+Developed by ROBOTIS and adapted for the Intelligent Systems Engineering Workspace under the Apache 2.0 License.

@@ -9,7 +9,7 @@ This guide provides a structured 6-stage walkthrough demonstrating how the core 
 ## Prerequisites
 
 ```bash
-cd "02 — Domains/ROS2/AMR_ws/turtlebot3_ws"
+cd "03 — Projects & Experiments/
 colcon build --symlink-install
 source install/setup.bash
 export TURTLEBOT3_MODEL=burger
